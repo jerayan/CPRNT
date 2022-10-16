@@ -182,7 +182,7 @@ end on
 
 on release
 
-    	if (in_range($EVENT_NOTE,$Min,$Max))
+    	if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
         ignore_event($EVENT_ID)
         note_off ($Delayed_Note)
         {Legato}
