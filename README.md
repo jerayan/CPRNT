@@ -15,4 +15,4 @@
 * Velocity to CC1
 
 ## How do I install it?:
-You can copy text directly from script.ksp file to the script editor in NI Kontakt and save to your Script folder for further use
+You can copy text directly from script.ksp file to the script editor (in first tab for propper working) in NI Kontakt and save to your Script folder for further use
