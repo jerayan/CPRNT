@@ -3,7 +3,7 @@
 Change Pitch with Note Range & 1st note Timing
 Author: Native Instruments
 Written by: Nicki Marinic, Dominik Svoboda
-Modified: October 14, 2022
+Modified: October 18, 2022
 *************************************************}
 on init
     make_perfview
@@ -12,7 +12,6 @@ on init
     
     declare ui_switch $learn_button
     declare ui_switch $pitch_bypass
-    make_persistent ($pitch_bypass)
 	set_text($learn_button,"Learn Keyrange")
     set_text($pitch_bypass,"Bypass Pitch")
 	declare $learn_counter
@@ -21,10 +20,8 @@ on init
 	set_text ($label_1,"Note range")
     declare ui_value_edit $Min (0,127,$VALUE_EDIT_MODE_NOTE_NAMES)
   	$Min := 24
-	make_persistent ($Min)
     declare ui_value_edit $Max (0,127,$VALUE_EDIT_MODE_NOTE_NAMES)
   	$Max := 48
-	make_persistent ($Max)
     set_script_title("Change Pitch w/ Range")
 	set_ui_height(2)
 	message("")
@@ -38,6 +35,7 @@ on init
 	$Semi := 0
 	set_knob_defval ($Semi,0)
 	make_persistent ($Semi)
+    read_persistent_var ($Semi)
 	set_knob_unit ($Semi,$KNOB_UNIT_ST)
 	move_control ($Semi,3,3)
 	set_control_help ($Semi,"Semi: Transposes incoming MIDI notes in semitones.")
@@ -45,7 +43,6 @@ on init
 	declare ui_knob $Octave (-10, 10, 1)
 	$Octave := 0
 	set_knob_defval ($Octave,0)
-	make_persistent ($Octave)
 	set_knob_unit ($Octave,$KNOB_UNIT_OCT)
 	move_control ($Octave, 2, 3)
 	set_control_help ($Octave,"Octave: Transposes incoming MIDI notes in octaves.")
@@ -85,9 +82,15 @@ on init
     declare ui_knob $1st_note (0,200,1)
 	move_control ($1st_note,5,2)
     $1st_note := 0
+
     make_persistent ($1st_note)
     make_persistent ($time_bypass)
-    
+    make_persistent ($pitch_bypass)
+    make_persistent ($Min)
+    make_persistent ($Max)
+	make_persistent ($Octave)
+    make_persistent ($min_after_transpose)
+    make_persistent ($max_after_transpose)
 end on
 
 on ui_control ($Min)
@@ -116,9 +119,7 @@ on ui_control ($Octave)
 end on
 
 on note
-
     {Learn Key Range}
-
 	if ($learn_button = 1)
 		if ($learn_counter = 0)
 			$Min := $EVENT_NOTE
@@ -147,11 +148,11 @@ on note
         end if
 
 	{Transposition}
+
     if ($pitch_bypass = 0)
     $transposition := ($Octave * 12) + $Semi 
     end if
     $transposed_note := $EVENT_NOTE + $transposition
-    
 	
 	if ($transposed_note < 0)
 		$transposed_note := 0
@@ -161,12 +162,10 @@ on note
 		$transposed_note := 127
 	end if
 
-   
     if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
 		ignore_event($EVENT_ID)
 
 	{Timing}
-
 	if ($time_bypass = 0)
         if ($n=0)
             $n:=1
@@ -174,6 +173,7 @@ on note
             else $n:=0
         end if
 	end if
+       
             change_note($EVENT_ID,$transposed_note)
         	$Delayed_Note := play_note ($transposed_note, $EVENT_VELOCITY, 0, -1)
     end if
@@ -200,4 +200,3 @@ on release
         $pressed := 0
     end if
 end on
-
