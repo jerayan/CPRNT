@@ -1,28 +1,28 @@
 
 {***********************************************
-Change Pitch with Note Range & 1st note Timing
+Change Pitch with Note Range & Note Timing
 Author: Native Instruments
 Written by: Nicki Marinic, Dominik Svoboda
-Modified: October 18, 2022
+Modified: October 19, 2022
 *************************************************}
 on init
-    make_perfview
-    
-    {****Range & Change pitch****}
-    
-    declare ui_switch $learn_button
-    declare ui_switch $pitch_bypass
+	make_perfview
+	
+	{****Range & Change pitch****}
+	declare %legato_array[2]
+	declare ui_switch $learn_button
+	declare ui_switch $pitch_bypass
 	set_text($learn_button,"Learn Keyrange")
-    set_text($pitch_bypass,"Bypass Pitch")
+	set_text($pitch_bypass,"Bypass Pitch")
 	declare $learn_counter
 	declare $a
-    declare ui_label $label_1 (1,1)
+	declare ui_label $label_1 (1,1)
 	set_text ($label_1,"Note range")
-    declare ui_value_edit $Min (0,127,$VALUE_EDIT_MODE_NOTE_NAMES)
-  	$Min := 24
-    declare ui_value_edit $Max (0,127,$VALUE_EDIT_MODE_NOTE_NAMES)
-  	$Max := 48
-    set_script_title("Change Pitch w/ Range")
+	declare ui_value_edit $Min (0,127,$VALUE_EDIT_MODE_NOTE_NAMES)
+	$Min := 24
+	declare ui_value_edit $Max (0,127,$VALUE_EDIT_MODE_NOTE_NAMES)
+	$Max := 48
+	set_script_title("Change Pitch w/ Range")
 	set_ui_height(2)
 	message("")
 	declare $min_after_transpose
@@ -30,12 +30,12 @@ on init
 	
 	declare polyphonic $transposition {transposition interval in Semitones}
 	declare polyphonic $transposed_note {note number of transposed note}
-    
+	
 	declare ui_knob $Semi (-11, 11, 1)
 	$Semi := 0
 	set_knob_defval ($Semi,0)
 	make_persistent ($Semi)
-    read_persistent_var ($Semi)
+	read_persistent_var ($Semi)
 	set_knob_unit ($Semi,$KNOB_UNIT_ST)
 	move_control ($Semi,3,3)
 	set_control_help ($Semi,"Semi: Transposes incoming MIDI notes in semitones.")
@@ -64,33 +64,42 @@ on init
 	move_control ($V_C, 4,3)
 
 
-    {****Timing****}
-    
-    declare ui_switch $time_bypass
-    declare $i
-    declare $n
-    declare $pressed
+	{****Timing****}
+	
+	declare ui_switch $time_bypass
+	declare $i
+	declare $n
+	declare $pressed
 	declare polyphonic $Delayed_Note
-    $i := 0
-    $n := 0
-    $pressed := 0
-    declare ui_label $info (1,1)
+	$i := 0
+	$n := 0
+	$pressed := 0
+
+	declare ui_label $info (1,1)
 	move_control ($info,5,1)
-    set_text ($info, "Timing in (ms):")
+	set_text ($info, "Timing in (ms):")
 	set_text ($time_bypass, "Bypass Timing")
 	move_control ($time_bypass,6,1)
-    declare ui_knob $1st_note (0,200,1)
-	move_control ($1st_note,5,2)
-    $1st_note := 0
 
-    make_persistent ($1st_note)
-    make_persistent ($time_bypass)
-    make_persistent ($pitch_bypass)
-    make_persistent ($Min)
-    make_persistent ($Max)
+	declare ui_knob $1st_note (0,200,1)
+	set_text ($1st_note, "1st Note")
+	move_control ($1st_note,6,2)
+	$1st_note := 0
+
+	declare ui_knob $timing (0,200,1)
+	set_text ($timing, "Timing")
+	move_control ($timing,5,2)
+	$timing := 0
+	
+	make_persistent ($timing)
+	make_persistent ($1st_note)
+	make_persistent ($time_bypass)
+	make_persistent ($pitch_bypass)
+	make_persistent ($Min)
+	make_persistent ($Max)
 	make_persistent ($Octave)
-    make_persistent ($min_after_transpose)
-    make_persistent ($max_after_transpose)
+	make_persistent ($min_after_transpose)
+	make_persistent ($max_after_transpose)
 end on
 
 on ui_control ($Min)
@@ -107,96 +116,103 @@ end on
 
 on ui_control ($Octave)
 	if ($Octave < 0)
-	$max_after_transpose := $Max - 12*$Octave
-	$min_after_transpose := $Min
-	message($min_after_transpose)
-	else
-	if ($Octave > 0)
-	$max_after_transpose := $Max
-	$min_after_transpose := $Min - 12*$Octave
-	end if
-	end if
-end on
-
-on note
-    {Learn Key Range}
-	if ($learn_button = 1)
-		if ($learn_counter = 0)
-			$Min := $EVENT_NOTE
-			inc($learn_counter)
+		$max_after_transpose := $Max - 12*$Octave
+		$min_after_transpose := $Min
+		{**message($min_after_transpose)**}
 		else
-			$Max := $EVENT_NOTE
-			$learn_counter := 0
-			$learn_button := 0
-			
-			if ($Min > $Max)
-				$a := $Max
-				$Max := $Min
-				$Min := $a
+			if ($Octave > 0)
+				$max_after_transpose := $Max
+				$min_after_transpose := $Min - 12*$Octave
 			end if
 		end if
-		ignore_event($EVENT_ID)
-		exit
-	end if
+	end on
 
-	{Velocity to CC1}
+	on note
+		{Learn Key Range}
+		if ($learn_button = 1)
+			if ($learn_counter = 0)
+				$Min := $EVENT_NOTE
+				inc($learn_counter)
+				else
+					$Max := $EVENT_NOTE
+					$learn_counter := 0
+					$learn_button := 0
+					
+					if ($Min > $Max)
+						$a := $Max
+						$Max := $Min
+						$Min := $a
+					end if
+				end if
+				ignore_event($EVENT_ID)
+				exit
+			end if
 
-        if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
-            if ($V_C = 1)
-                change_velo($EVENT_ID, %CC[1])
-            end if
-        end if
+			{Velocity to CC1}
 
-	{Transposition}
+			if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
+				if ($V_C = 1)
+					change_velo($EVENT_ID, %CC[1])
+				end if
+			end if
 
-    if ($pitch_bypass = 0)
-    $transposition := ($Octave * 12) + $Semi 
-    end if
-    $transposed_note := $EVENT_NOTE + $transposition
-	
-	if ($transposed_note < 0)
-		$transposed_note := 0
-	end if
-	
-	if ($transposed_note > 127)
-		$transposed_note := 127
-	end if
+			{Transposition}
 
-    if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
-		ignore_event($EVENT_ID)
+			if ($pitch_bypass = 0)
+				$transposition := ($Octave * 12) + $Semi 
+			end if
+			$transposed_note := $EVENT_NOTE + $transposition
+			
+			if ($transposed_note < 0)
+				$transposed_note := 0
+			end if
+			
+			if ($transposed_note > 127)
+				$transposed_note := 127
+			end if
+			if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
+				ignore_event($EVENT_ID)
+				{Timing}
+				if ($time_bypass = 0)
+					if ($n=0)
+						wait($1st_note*1000+1)
+						else $n:=1 
+						end if
+						wait($timing*1000+1)
+					end if
+					$Delayed_Note := play_note($transposed_note,$EVENT_VELOCITY,0,0)
+				end if 
+				message(%legato_array[0] & " " & %legato_array[1]) 
+			end on
 
-	{Timing}
-	if ($time_bypass = 0)
-        if ($n=0)
-            $n:=1
-            wait($1st_note*1000+1)
-            else $n:=0
-        end if
-	end if
-       
-            change_note($EVENT_ID,$transposed_note)
-        	$Delayed_Note := play_note ($transposed_note, $EVENT_VELOCITY, 0, -1)
-    end if
-    
-end on
+			on release
+				if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
+					{Legato}
+					while ($i<128)
+						if (%KEY_DOWN[$i]=1)
+							$pressed := 1
+							$n := $n + 1
+							%legato_array[1] := 1
+						end if
+						inc($i)
+					end while
+					if ($pressed = 0)
+						$n := 0
+						%legato_array[1] := 0
+					end if
+					$i := 0
+					$pressed := 0
 
-on release
+					ignore_event($EVENT_ID)
+					{Timing}
+					if ($time_bypass = 0)
+						if ($1st_note > $timing and %legato_array[0] = 0 and %legato_array[1] = 0)
+							wait($1st_note*1000+1)
+							else wait($timing*1000+1)
+							end if
+						end if
+						note_off($EVENT_ID)
+						note_off($Delayed_Note)
 
-    	if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
-        ignore_event($EVENT_ID)
-        note_off ($Delayed_Note)
-        {Legato}
-        while ($i<128)
-            if (%KEY_DOWN[$i]=1)
-                $pressed := 1
-                $n := $n + 1
-            end if
-            inc($i)
-        end while
-        if ($pressed = 0)
-            $n := 0
-        end if
-        $i := 0
-        $pressed := 0
-    end if
-end on
+					end if
+				end on
