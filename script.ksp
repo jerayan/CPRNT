@@ -1,13 +1,14 @@
 
 {***********************************************
-Change Pitch with Note Range & Note Timing
+Change Pitch with Note Range & 1st note Timing
 Author: Native Instruments
 Written by: Nicki Marinic, Dominik Svoboda
-Modified: October 19, 2022
+Modified: January 4, 2024
 *************************************************}
 on init
+
 	make_perfview
-	
+
 	{****Range & Change pitch****}
 	declare %legato_array[2]
 	declare ui_switch $learn_button
@@ -30,7 +31,7 @@ on init
 	
 	declare polyphonic $transposition {transposition interval in Semitones}
 	declare polyphonic $transposed_note {note number of transposed note}
-	
+
 	declare ui_knob $Semi (-11, 11, 1)
 	$Semi := 0
 	set_knob_defval ($Semi,0)
@@ -65,7 +66,7 @@ on init
 
 
 	{****Timing****}
-	
+
 	declare ui_switch $time_bypass
 	declare $i
 	declare $n
@@ -90,7 +91,7 @@ on init
 	set_text ($timing, "Timing")
 	move_control ($timing,5,2)
 	$timing := 0
-	
+
 	make_persistent ($timing)
 	make_persistent ($1st_note)
 	make_persistent ($time_bypass)
@@ -100,6 +101,13 @@ on init
 	make_persistent ($Octave)
 	make_persistent ($min_after_transpose)
 	make_persistent ($max_after_transpose)
+	make_persistent($n)
+  	make_persistent($i)
+end on
+
+on ui_control($1st_note)
+  	$max_after_transpose := $Max
+    $min_after_transpose := $Min
 end on
 
 on ui_control ($Min)
@@ -114,18 +122,22 @@ on ui_control ($Max)
 	end if
 end on
 
-on ui_control ($Octave)
-	if ($Octave < 0)
-		$max_after_transpose := $Max - 12*$Octave
-		$min_after_transpose := $Min
-		{**message($min_after_transpose)**}
-		else
-			if ($Octave > 0)
-				$max_after_transpose := $Max
-				$min_after_transpose := $Min - 12*$Octave
-			end if
-		end if
-	end on
+on ui_control($Octave)
+  if ($Octave=0)
+    $max_after_transpose := $Max
+    $min_after_transpose := $Min
+  else
+    if ($Octave<0)
+      $max_after_transpose := $Max-(12*$Octave)
+      $min_after_transpose := $Min
+    else
+      if ($Octave>0)
+        $max_after_transpose := $Max
+        $min_after_transpose := $Min-(12*$Octave)
+      end if
+    end if
+  end if
+end on
 
 	on note
 		{Learn Key Range}
@@ -137,7 +149,7 @@ on ui_control ($Octave)
 					$Max := $EVENT_NOTE
 					$learn_counter := 0
 					$learn_button := 0
-					
+
 					if ($Min > $Max)
 						$a := $Max
 						$Max := $Min
@@ -162,19 +174,12 @@ on ui_control ($Octave)
 				$transposition := ($Octave * 12) + $Semi 
 			end if
 			$transposed_note := $EVENT_NOTE + $transposition
-			
-			if ($transposed_note < 0)
-				$transposed_note := 0
-			end if
-			
-			if ($transposed_note > 127)
-				$transposed_note := 127
-			end if
+
 			if (in_range($EVENT_NOTE,$min_after_transpose,$max_after_transpose))
 				ignore_event($EVENT_ID)
 				{Timing}
 				if ($time_bypass = 0)
-					if ($n=0)
+					if ($1st_note > 0 and %legato_array[1] = 0)
 						wait($1st_note*1000+1)
 						else $n:=1 
 						end if
@@ -203,16 +208,28 @@ on ui_control ($Octave)
 					$i := 0
 					$pressed := 0
 
-					ignore_event($EVENT_ID)
+					ignore_event($EVENT_NOTE)
 					{Timing}
 					if ($time_bypass = 0)
-						if ($1st_note > $timing and %legato_array[0] = 0 and %legato_array[1] = 0)
-							wait($1st_note*1000+1)
-							else wait($timing*1000+1)
-							end if
-						end if
-						note_off($EVENT_ID)
-						note_off($Delayed_Note)
+						if ($1st_note > 0 and %legato_array[1] = 0)
+							while($NOTE_HELD = 1)
+								wait($1st_note*1000+10)
+				    		end while
+						    note_off($EVENT_NOTE)
+						    wait(1)
+							note_off($Delayed_Note)
+						else
+							while($NOTE_HELD = 1)
+								wait($timing*1000+1)
+							end while
 
+							note_off($EVENT_NOTE)
+							wait($timing*1000+1)
+							note_off($Delayed_Note)
+
+						end if
 					end if
-				end on
+					note_off($EVENT_ID)
+					note_off($Delayed_Note)
+				end if
+			end on
